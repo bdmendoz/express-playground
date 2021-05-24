@@ -4,162 +4,82 @@ const AWS = require('aws-sdk');
 const config = require('./config');
 const { v4: uuidv4 } = require('uuid');
 const e = require('express');
-
+const EmployeeService = require("./services/employee-service");
+const employeeService = new EmployeeService();
 app.use(express.json());
 
 AWS.config.update(config.aws_remote_config);
 
 
-app.get('/', function (req, res, next) {
-    res.send({ hello: 'hola ' });
-});
-app.get('/trabajadores', function (req, res) {
-    const docClient = new AWS.DynamoDB.DocumentClient();
+app.get('/', async function (req, res, next) {
 
-    const params = {
-        TableName: config.aws_table_name
-    }
-    docClient.scan(params, function (err, data) {
-        if (err) {
-            
-            res.send({
-                success: false,
-                message: err
-            });
-        } else {
-            
-            const { Items } = data;
-            res.send({
-                success: true,
-                trabajadores: Items
-            });
-        }
-
+    res.status(200).json({
+        data: { hello: 'bienvenido al api' },
+        message: "Endpoint funcionando"
     });
 });
-app.get('/trabajadores/:EmployeeId', function (req, res) {
+app.get('/trabajadores', async function (req, res) {
+    const employees = await employeeService.getAllEmployees();
+
+    res.status(200).json({
+        data: employees,
+        message: "employees listed"
+    });
+});
+app.get('/trabajadores/:EmployeeId', async function (req, res) {
     const { EmployeeId } = req.params;
-    const docClient = new AWS.DynamoDB.DocumentClient();
-    const params = {
-        TableName: config.aws_table_name,
-        Key: {
-            id: EmployeeId
-        }
-    };
-    docClient.get(params, function (err, data) {
-        if (err) {
-            
-            res.send({
-                success: false,
-                message: err
-            });
-        } else {
-            const {Item} = data;
-            res.send({
-                success: true,
-                data: Item
-            });
-        }
+    const employee = await employeeService.getEmployee(EmployeeId);
+    res.status(200).json({
+        data: employee,
+        message: "employee listed"
     });
+
 });
-app.post('/trabajadores', function (req, res) {
-    const docClient = new AWS.DynamoDB.DocumentClient();
+app.post('/trabajadores', async function (req, res, next) {
     const item = { ...req.body };
     item.id = uuidv4();
-    const params = {
-        TableName: config.aws_table_name,
-        Item: item
-    };
-
-    docClient.put(params, function (err, data) {
-        if (err) {
-            res.send({
-                success: false,
-                message: err
+    try {
+        const createdEmployee = await employeeService.createEmployee(item);      
+        res.status(201).json(
+            {
+                data: createdEmployee,
+                message: "employee created"
             });
-        } else {
-            
-            res.send(
-                {
-                    success: true,
-                    message: 'Added item',
-                    data: item
-                }
-            );
-        }
-    });
+    } catch (err) {
+        next(err);
+    }
 
 });
 
-app.put('/trabajadores/:EmployeeId', function (req, res) {
+app.put('/trabajadores/:EmployeeId', async function (req, res) {
     const item = { ...req.body };
-    const docClient = new AWS.DynamoDB.DocumentClient();
+   
     const { EmployeeId } = req.params;
-
-    
-    const params = {
-        TableName: config.aws_table_name,
-        Key: {
-            id: EmployeeId
-        },
-        UpdateExpression: "set cargo = :c, celular=:p, edad=:e, nombre=:n",
-        ExpressionAttributeValues: {
-            ":c": item.cargo,
-            ":p": item.celular,
-            ":e": item.edad,
-            ":n": item.nombre
-        },
-        ReturnValues: "ALL_NEW"
-    };
-    
-    docClient.update(params, function (err, data) {
-        if (err) {
-            res.send({
-                success: false,
-                message: err
-            });
-        } else {
-            const {Attributes}= data;
-            res.send(
-                {
-                    success: true,
-                    message: 'Updated item',
-                    data: Attributes
-                }
-            );
-        }
-    });
+    try{
+        const updatedEmployee= await employeeService.updateEmployee(EmployeeId, item);
+        console.log(updatedEmployee);
+        res.status(200).json({
+            data:updatedEmployee,
+            message: "employee updated"
+        });
+    }catch( err){
+        next(err);
+    }
+  
 });
-app.delete('/trabajadores/:EmployeeId', function (req, res, next) {
-    const docClient = new AWS.DynamoDB.DocumentClient();
-    const { EmployeeId } = req.params;
+app.delete('/trabajadores/:EmployeeId', async function (req, res, next) {
     
-    const params = {
-        TableName: config.aws_table_name,
-        Key: {
-            id: EmployeeId
+    const { EmployeeId } = req.params;
 
-        },
-        ReturnValues: "ALL_OLD"
-    };
-     
-    docClient.delete(params, function (err, data) {
-        if (err) {
-            res.send({
-                success: false,
-                message: err
+    try{
+        const deletedEmployee= await employeeService.deleteEmployee(EmployeeId);
+        res.status(200).json({
+                data:deletedEmployee,
+                message: 'employee deleted'
             });
-
-        } else {
-            res.send(
-                {
-                    success: true,
-                    message: 'deleted item',
-                    data: data
-                }
-            );
-        }
-    });
+    }catch(err){
+        next(err);
+    }
 });
 
 const server = app.listen(3001, function () {

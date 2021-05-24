@@ -1,7 +1,7 @@
 {
   "name": "express-playground",
   "version": "1.0.0",
-  "description": "",
+  "description": "API playground using express,  trying to use clean architecture",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index",
@@ -18,5 +18,13 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.7"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bdmendoz/express-playground.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bdmendoz/express-playground/issues"
+  },
+  "homepage": "https://github.com/bdmendoz/express-playground#readme"
 }
